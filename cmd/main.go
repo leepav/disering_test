@@ -149,7 +149,7 @@ func main() {
 
 	dithereredImg := ditherer.Dither(img)
 
-	outputPath := fmt.Sprintf("output_%s.png", ditherer.Name())
+	outputPath := fmt.Sprintf("output/output_%s.png", ditherer.Name())
 	outFile, err := os.Create(outputPath)
 	if err != nil {
 		fmt.Printf("Error creating output file: %v\n", err)
