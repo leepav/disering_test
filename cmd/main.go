@@ -12,13 +12,11 @@ import (
 	"strings"
 )
 
-// Ditherer interface for dithering methods
 type Ditherer interface {
 	Dither(img image.Image, isColor bool) image.Image
-	Name() string // Method to get the name of the dithering method
+	Name() string
 }
 
-// AtkinsonDitherer implements Atkinson dithering
 type AtkinsonDitherer struct{}
 
 func (ad AtkinsonDitherer) Dither(img image.Image, isColor bool) image.Image {
@@ -56,7 +54,6 @@ func (sd ShtukiDitherer) Name() string {
 	return "shtuki"
 }
 
-// SierraLiteDitherer implements Sierra Lite dithering
 type SierraLiteDitherer struct{}
 
 func (sld SierraLiteDitherer) Dither(img image.Image, isColor bool) image.Image {
@@ -70,22 +67,18 @@ func (sld SierraLiteDitherer) Name() string {
 	return "sierra_lite"
 }
 
-// Helper function to apply color dithering using a matrix
 func ditherColor(img image.Image, matrix [][]int, divisor float64) *image.RGBA {
 	bounds := img.Bounds()
 	ditheredImg := image.NewRGBA(bounds)
 
-	// Separate the image into R, G, B channels
-	red := extractChannel(img, 0)   // Red channel
-	green := extractChannel(img, 1) // Green channel
-	blue := extractChannel(img, 2)  // Blue channel
+	red := extractChannel(img, 0)
+	green := extractChannel(img, 1)
+	blue := extractChannel(img, 2)
 
-	// Apply dithering to each channel
 	ditheredRed := ditherChannel(red, matrix, divisor)
 	ditheredGreen := ditherChannel(green, matrix, divisor)
 	ditheredBlue := ditherChannel(blue, matrix, divisor)
 
-	// Combine the dithered channels into an RGBA image
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			r := ditheredRed.GrayAt(x, y).Y
@@ -98,19 +91,16 @@ func ditherColor(img image.Image, matrix [][]int, divisor float64) *image.RGBA {
 	return ditheredImg
 }
 
-// Helper function to apply mono dithering using a matrix
 func ditherMono(img image.Image, matrix [][]int, divisor float64) *image.Gray {
 	bounds := img.Bounds()
 	grayImg := image.NewGray(bounds)
 
-	// Convert to grayscale
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			grayImg.SetGray(x, y, color.GrayModel.Convert(img.At(x, y)).(color.Gray))
 		}
 	}
 
-	// Apply dithering
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			oldPixel := grayImg.GrayAt(x, y).Y
@@ -119,11 +109,10 @@ func ditherMono(img image.Image, matrix [][]int, divisor float64) *image.Gray {
 
 			quantError := int(oldPixel) - int(newPixel)
 
-			// Distribute error using matrix
 			for i := 0; i < len(matrix); i++ {
 				for j := 0; j < len(matrix[i]); j++ {
 					if matrix[i][j] != 0 {
-						nx, ny := x+j-2, y+i // Adjust x position based on matrix
+						nx, ny := x+j-2, y+i
 						if nx >= 0 && nx < bounds.Max.X && ny >= 0 && ny < bounds.Max.Y {
 							oldNeighbor := grayImg.GrayAt(nx, ny).Y
 							newNeighbor := uint8(math.Min(255, math.Max(0, float64(oldNeighbor)+float64(quantError)*(float64(matrix[i][j])/divisor))))
@@ -138,7 +127,6 @@ func ditherMono(img image.Image, matrix [][]int, divisor float64) *image.Gray {
 	return grayImg
 }
 
-// Helper function to extract a single color channel from an image
 func extractChannel(img image.Image, channelIndex int) *image.Gray {
 	bounds := img.Bounds()
 	grayImg := image.NewGray(bounds)
@@ -162,19 +150,16 @@ func extractChannel(img image.Image, channelIndex int) *image.Gray {
 	return grayImg
 }
 
-// Helper function to apply dithering to a single channel
 func ditherChannel(channel *image.Gray, matrix [][]int, divisor float64) *image.Gray {
 	bounds := channel.Bounds()
 	ditheredChannel := image.NewGray(bounds)
 
-	// Copy the original channel to the dithered channel
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			ditheredChannel.SetGray(x, y, channel.GrayAt(x, y))
 		}
 	}
 
-	// Apply dithering
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			oldPixel := ditheredChannel.GrayAt(x, y).Y
@@ -183,11 +168,10 @@ func ditherChannel(channel *image.Gray, matrix [][]int, divisor float64) *image.
 
 			quantError := int(oldPixel) - int(newPixel)
 
-			// Distribute error using matrix
 			for i := 0; i < len(matrix); i++ {
 				for j := 0; j < len(matrix[i]); j++ {
 					if matrix[i][j] != 0 {
-						nx, ny := x+j-2, y+i // Adjust x position based on matrix
+						nx, ny := x+j-2, y+i
 						if nx >= 0 && nx < bounds.Max.X && ny >= 0 && ny < bounds.Max.Y {
 							oldNeighbor := ditheredChannel.GrayAt(nx, ny).Y
 							newNeighbor := uint8(math.Min(255, math.Max(0, float64(oldNeighbor)+float64(quantError)*(float64(matrix[i][j])/divisor))))
@@ -202,7 +186,6 @@ func ditherChannel(channel *image.Gray, matrix [][]int, divisor float64) *image.
 	return ditheredChannel
 }
 
-// Helper function to find the closest palette color
 func findClosestPaletteColor(pixel uint8) uint8 {
 	if pixel < 128 {
 		return 0
@@ -211,13 +194,12 @@ func findClosestPaletteColor(pixel uint8) uint8 {
 }
 
 func main() {
-	// Prompt for image path
+
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter the path to the image file: ")
 	imagePath, _ := reader.ReadString('\n')
 	imagePath = strings.TrimSpace(imagePath)
 
-	// Open and decode image
 	file, err := os.Open(imagePath)
 	if err != nil {
 		fmt.Printf("Error opening image file: %v\n", err)
@@ -239,13 +221,11 @@ func main() {
 		return
 	}
 
-	// Prompt for dithering mode (color or mono)
 	fmt.Print("Choose dithering mode (1 for color, 2 for mono): ")
 	mode, _ := reader.ReadString('\n')
 	mode = strings.TrimSpace(mode)
 	isColor := mode == "1"
 
-	// Prompt for dithering method
 	fmt.Println("Choose a dithering method:")
 	fmt.Println("1. Atkinson")
 	fmt.Println("2. FloydSteinberg")
@@ -270,10 +250,8 @@ func main() {
 		ditherer = AtkinsonDitherer{}
 	}
 
-	// Apply dithering
 	ditheredImg := ditherer.Dither(img, isColor)
 
-	// Generate output file name based on the chosen method and mode
 	modeName := "color"
 	if !isColor {
 		modeName = "mono"
@@ -286,7 +264,6 @@ func main() {
 	}
 	defer outFile.Close()
 
-	// Encode the image as PNG
 	if err := png.Encode(outFile, ditheredImg); err != nil {
 		fmt.Printf("Error encoding image: %v\n", err)
 		return
